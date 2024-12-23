@@ -163,9 +163,10 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 #kubectl create namespace apple
 
 # Deploy Apple
-APPLEDIR=/media/tim/ExtraDrive1/Projects/learn-gateway-nginx/Test/
+APPLEDIR=/media/tim/ExtraDrive1/Projects/learn-04-nginx-gateway-fabric/
 kubectl apply -f $APPLEDIR/kube/apple.yaml
 
+# Wait until the apple pod is ready
 curl --resolve apple.example.com:$GW_PORT:$GW_IP http://apple.example.com:$GW_PORT/
 
 # Test with trace
