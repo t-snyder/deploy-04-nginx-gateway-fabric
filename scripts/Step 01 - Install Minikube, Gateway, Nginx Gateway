@@ -1,0 +1,174 @@
+#!/bin/bash
+
+# Step 1 - Deploys and configures the following:
+#            a) minikube, minikube addons (dashboard, metrics-server);
+#            b) configures encryption for etcd storage
+#            c) installs istio in ambient mode
+#            d) installs kubernetes gateway API CRDs
+#            e) creates cert-manager namespace
+#            f) installs cert-manager gateway CRDs
+#            g) installs cert-manager with gateway enabled
+
+# This learning prototype was developed and tested using the following:
+#   a) Ubuntu             - 20.04.6 LTS
+#   b) Minikube           - 1.34.0
+#   c) Kubernetes         - 1.31.0
+#   d) Docker             - 27.2.0
+#   d) Cert-manager       - 1.15.3
+#   e) Istio              - 1.23.2
+#   e) Hashicorp Vault    - 1,17.3
+#   f) Kubernetes Gateway - 1.1.0
+#   g) Machine config - Processor - Intel® Core™ i7-7700K CPU @ 4.20GHz × 8 
+#                       Memory    - 64 GB
+#            
+# Open terminal 1
+# Delete prior minikube ( if used and configured prior)
+minikube delete
+
+# Start minikube - configure the settings to your requirements and hardware
+minikube start --cpus 4 --memory 12288 --vm-driver kvm2 --disk-size 100g
+
+# Addons
+minikube addons enable dashboard
+minikube addons enable metallb
+
+# Configure loadbalancer ip address range within the same range as the minikube ip
+# The configuration is a start ip ( ie. 192.168.39.40 ) and an end ip that makes a 
+# range of 10 ip addresses. The range should not overlap the minikube ip
+minikube ip
+minikube addons configure metallb
+  -- Enter Load Balancer Start IP: 
+  -- Enter Load Balancer End IP:
+
+# Start dashboard
+minikube dashboard
+
+# Open up a new (2nd) terminal
+# Install the Kubernetes Gateway API CRDs
+#kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.4.0" | kubectl apply -f -
+#kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.4.0" | kubectl apply -f -
+
+# Deploy nginx gateway CRDs (stable)
+#kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/crds.yaml
+
+#Deploy nginx gateway fabric with experimental features
+#kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/experimental/deploy.yaml
+
+# Verify deployment - Wait until the pod status is Running to move past this step
+#kubectl get pods -n nginx-gateway
+
+# Open up a new (2nd) terminal
+# Install the Kubernetes Gateway API CRDs - standard and experimental
+kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.1" | kubectl apply -f -
+
+#Deploy nginx gateway fabric CRDs stable
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.1/deploy/crds.yaml
+
+# Deploy nginx gateway fabric - standard and experimental
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.5.1/deploy/experimental/deploy.yaml
+
+# Verify deployment - Wait until the pod status is Running to move past this step
+kubectl get pods -n nginx-gateway
+
+# Setup demo coffee app
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coffee
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: coffee
+  template:
+    metadata:
+      labels:
+        app: coffee
+    spec:
+      containers:
+      - name: coffee
+        image: nginxdemos/nginx-hello:plain-text
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coffee
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: coffee
+EOF
+
+kubectl get pods,svc
+
+# Create the cafe gateway
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: "*.example.com"
+EOF
+
+# Create the http route
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: coffee
+spec:
+  parentRefs:
+  - name: gateway
+  hostnames:
+  - "cafe.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: coffee
+      port: 80
+EOF
+
+# Obtain the gateway EXTERNAL-IP address (should be within the Loadbalancer range configured above.
+kubectl get svc nginx-gateway -n nginx-gateway
+# Set variables
+GW_IP=<EXTERNAL-IP>
+GW_PORT=<80 or 443>
+
+# Test the gateway is setup.
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/
+
+# NOTE - Another way of configuring the IP address is to edit the /etc/hosts file with the
+#        EXTERNAL-IP obtained above associated with the url ie. cafe.example.com
+
+# In a separate terminal - start the minikube loadbalancer emulator (it will ask for sudo pwd)
+#minikube tunnel
+
+# Create apple namespace
+#kubectl create namespace apple
+
+# Deploy Apple
+APPLEDIR=/media/tim/ExtraDrive1/Projects/learn-gateway-nginx/Test/
+kubectl apply -f $APPLEDIR/kube/apple.yaml
+
+curl --resolve apple.example.com:$GW_PORT:$GW_IP http://apple.example.com:$GW_PORT/
+
+# Test with trace
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP  -kvtL http://cafe.example.com:$GW_PORT/
+curl --resolve apple.example.com:$GW_PORT:$GW_IP -kvtL http://apple.example.com:$GW_PORT/
+
