@@ -26,3 +26,19 @@ the default namespace. Tests of these deployments use curl.
 Due to the limitation of a single Gateway Class instance, no further work was done on extending
 this prototype.
 
+## Project Deployment
+**Note :**<br>
+The commands within the shell files below are meant to be copy pasted (one or a few lines at a time) into a terminal, and not run as an automated bash script.
+
+Deployment file Steps - (Step 01-Install Minikube, Gateway, Nginx Gateway
+  1. Deploy fresh minikube environment.
+  2. Configure Metallb loadbalancer
+  3. Deploy Kubernetes Gateway API CRDs
+  4. Deploy Nginx Gateway Fabric
+  5. Verify fabric pod deployment
+  6. Deploy demo coffee app and service
+  7. Deploy Gateway and HTTPRoute to service
+  8. Obtain Port and URL
+  9. Test coffee app access
+  10. Deploy Apple App (Http echo)
+  11. Test apple app access

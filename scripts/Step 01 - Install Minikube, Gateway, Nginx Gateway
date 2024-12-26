@@ -1,26 +1,5 @@
 #!/bin/bash
 
-# Step 1 - Deploys and configures the following:
-#            a) minikube, minikube addons (dashboard, metrics-server);
-#            b) configures encryption for etcd storage
-#            c) installs istio in ambient mode
-#            d) installs kubernetes gateway API CRDs
-#            e) creates cert-manager namespace
-#            f) installs cert-manager gateway CRDs
-#            g) installs cert-manager with gateway enabled
-
-# This learning prototype was developed and tested using the following:
-#   a) Ubuntu             - 20.04.6 LTS
-#   b) Minikube           - 1.34.0
-#   c) Kubernetes         - 1.31.0
-#   d) Docker             - 27.2.0
-#   d) Cert-manager       - 1.15.3
-#   e) Istio              - 1.23.2
-#   e) Hashicorp Vault    - 1,17.3
-#   f) Kubernetes Gateway - 1.1.0
-#   g) Machine config - Processor - Intel® Core™ i7-7700K CPU @ 4.20GHz × 8 
-#                       Memory    - 64 GB
-#            
 # Open terminal 1
 # Delete prior minikube ( if used and configured prior)
 minikube delete
