@@ -23,21 +23,7 @@ minikube addons configure metallb
 minikube dashboard
 
 # Open up a new (2nd) terminal
-# Install the Kubernetes Gateway API CRDs
-#kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.4.0" | kubectl apply -f -
-#kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.4.0" | kubectl apply -f -
-
-# Deploy nginx gateway CRDs (stable)
-#kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/crds.yaml
-
-#Deploy nginx gateway fabric with experimental features
-#kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.4.0/deploy/experimental/deploy.yaml
-
-# Verify deployment - Wait until the pod status is Running to move past this step
-#kubectl get pods -n nginx-gateway
-
-# Open up a new (2nd) terminal
-# Install the Kubernetes Gateway API CRDs - standard and experimental
+# Install the Nginx Fabric Kubernetes Gateway API CRDs - standard and experimental
 kubectl kustomize "https://github.com/nginxinc/nginx-gateway-fabric/config/crd/gateway-api/experimental?ref=v1.5.1" | kubectl apply -f -
 
 #Deploy nginx gateway fabric CRDs stable
@@ -127,9 +113,9 @@ EOF
 kubectl get svc nginx-gateway -n nginx-gateway
 # Set variables
 GW_IP=<EXTERNAL-IP>
-GW_PORT=<80 or 443>
+GW_PORT=80
 
-# Test the gateway is setup.
+# Test the gateway is setup - HTTP.
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/
 
 # NOTE - Another way of configuring the IP address is to edit the /etc/hosts file with the
@@ -142,8 +128,10 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 #kubectl create namespace apple
 
 # Deploy Apple
-APPLEDIR=/media/tim/ExtraDrive1/Projects/learn-04-nginx-gateway-fabric/
+APPLEDIR=/media/tim/ExtraDrive1/Projects/deploy-04-nginx-gateway-fabric/
 kubectl apply -f $APPLEDIR/kube/apple.yaml
+
+kubectl get pods
 
 # Wait until the apple pod is ready
 curl --resolve apple.example.com:$GW_PORT:$GW_IP http://apple.example.com:$GW_PORT/
